@@ -1,0 +1,1 @@
+window._CCSettings={platform:"wechatgame",groupList:["default"],collisionMatrix:[[true]],hasResourcesBundle:true,hasStartSceneBundle:false,remoteBundles:[],subpackages:[],launchScene:"db://assets/Main.fire",orientation:"",server:"",jsList:[],bundleVers:{internal:"18db7",resources:"459d6",main:"e189f"}};

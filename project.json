@@ -1,0 +1,8 @@
+{
+  "engine": "cocos-creator-js",
+  "packages": "packages",
+  "name": "TestShader",
+  "id": "0f5519ca-92bb-402f-83b3-0466f2b97350",
+  "version": "2.4.3",
+  "isNew": false
+}

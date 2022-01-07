@@ -1,0 +1,255 @@
+// Copyright (c) 2017-2018 Xiamen Yaji Software Co., Ltd.  
+
+CCEffect %{
+  techniques:
+  - passes:
+    - vert: vs
+      frag: fs
+      blendState:
+        targets:
+        - blend: true
+      rasterizerState:
+        cullMode: none
+      properties:
+        i_shadowColor: { value: [0, 0, 0, 0.5] }
+        i_outlineColor: { value: [0, 0, 0, 1] }
+        i_olShadowColor: { value: [0, 0, 0, 0.5] }
+        i_color1: { value: [1, 0, 0, 1] }
+        i_color2: { value: [0, 1, 0, 1] }
+        i_color3: { value: [0, 0, 1, 1] }
+        i_flColor: { value: [1, 1, 1, 1] }
+        i_glowColor: { value: [1, 1, 1, 1] }
+        i_resolution: { value: [1, 1] }
+        i_shadowOffset: { value: [0.01, 0.01] }
+        i_outlineWidth: { value: [0.01, 0.01] }
+        i_olShadowOffset: { value: [0.01, 0.01] }
+        i_glowWidth: { value: [0.1, 0.1] }
+        i_alpha: { value: 1 }
+        i_shadow: { value: 0 }
+        i_outline: { value: 0 }
+        i_olShadow: { value: 0 }
+        i_gradient: { value: 0 }
+        i_flowLight: { value: 0 }
+        i_flTime: { value: 0 }
+        i_flRot: { value: 0 }
+        i_flWidth: { value: 0.05 }
+        i_glow: { value: 0 }
+        i_glowDepth: { value: 2. }
+        texture: { value: white }
+        alphaThreshold: { value: 0.5 }
+}%
+
+
+CCProgram vs %{
+  precision highp float;
+
+  #include <cc-global>
+  #include <cc-local>
+
+  in vec3 a_position;
+  in vec4 a_color;
+  out vec4 v_color;
+
+  #if USE_TEXTURE
+  in vec2 a_uv0;
+  out vec2 v_uv0;
+  #endif
+
+  void main () {
+    vec4 pos = vec4(a_position, 1);
+
+    #if CC_USE_MODEL
+    pos = cc_matViewProj * cc_matWorld * pos;
+    #else
+    pos = cc_matViewProj * pos;
+    #endif
+
+    #if USE_TEXTURE
+    v_uv0 = a_uv0;
+    #endif
+
+    v_color = a_color;
+
+    gl_Position = pos;
+  }
+}%
+
+
+CCProgram fs %{
+  precision highp float;
+  
+  #include <alpha-test>
+  #include <texture>
+
+  in vec4 v_color;
+
+  #if USE_TEXTURE
+  in vec2 v_uv0;
+  uniform sampler2D texture;
+  #endif
+
+  uniform UARGS {
+    vec4 i_shadowColor;
+    vec4 i_outlineColor;
+    vec4 i_olShadowColor;
+    vec4 i_color1; 
+    vec4 i_color2;  
+    vec4 i_color3;
+    vec4 i_flColor;
+    vec4 i_glowColor;
+    vec2 i_resolution; 
+    vec2 i_shadowOffset;
+    vec2 i_outlineWidth;
+    vec2 i_olShadowOffset;
+    vec2 i_glowWidth;
+    float i_alpha;
+    float i_shadow;
+    float i_outline;
+    float i_olShadow;
+    float i_gradient;
+    float i_flowLight;
+    float i_flTime;
+    float i_flRot;
+    float i_flWidth;
+    float i_glow;
+    float i_glowDepth;
+  };
+
+  const float PI = 3.1415;
+  const float accuracy = 32.;
+
+  float getA(vec2 p) {
+    vec2 tp = vec2(p.x+.5, .5-p.y);
+    float a = 0.0001;
+    a += step(abs(p.x), .5)*step(abs(p.y), .5)*texture2D(texture, tp).a;
+    return a;
+  }
+
+  vec4 transCol(vec4 c1, vec4 c2) {
+    float k = (1.-c1.a)*c2.a/(c1.a+c2.a);
+    vec4 c = vec4(.0);
+    c.rgb = mix(c1.rgb, c2.rgb, k);
+    c.a = c1.a+k*c2.a;
+    return c;
+  }
+
+  void main () {
+    //计算缩放比例，防止超框截断（只考虑宽）
+    float dw = .0;
+    dw += step(.5, i_shadow)*abs(i_shadowOffset.x);
+    dw += step(.5, i_outline)*abs(i_outlineWidth.x*2.);
+    dw += step(.5, i_outline)*step(.5, i_olShadow)*abs(i_olShadowOffset.x);
+    dw += step(.5, i_glow)*abs(i_glowWidth.x*2.);
+    float scale = 1.+dw;
+
+    //uv变换
+    vec2 uv = vec2(v_uv0.x-.5, .5-v_uv0.y)*scale;
+    uv -= step(.5, i_shadow)*i_shadowOffset*0.5;
+    vec2 olsuv = vec2(i_olShadowOffset.x+sign(i_olShadowOffset.x)*i_outlineWidth.x, i_olShadowOffset.y+sign(i_olShadowOffset.y)*i_outlineWidth.y);
+    uv -= step(.5, i_outline)*step(.5, i_olShadow)*olsuv*0.5;
+
+    //颜色、渐变
+    vec4 col = vec4(.0);
+    float a = getA(uv);
+    //三色
+    col += step(1.5, i_gradient)*step(.0, uv.y)*mix(i_color1, i_color2, 1.-uv.y*2./scale);
+    col += step(1.5, i_gradient)*step(uv.y, .0)*mix(i_color2, i_color3, -uv.y*2./scale);
+    //双色
+    col += step(.5, i_gradient)*step(i_gradient, 1.5)*mix(i_color1, i_color2, uv.y/scale+.5);
+    //单色
+    col += step(i_gradient, .5)*i_color1;
+    col.rgb *= step(.0, a);
+    col.a *= a;
+    
+    //流光
+    if(i_flowLight > .5) {
+      float rad = PI*i_flRot/180.;
+      float w = i_flWidth/cos(rad);
+      float tan_rad = tan(rad);
+      float t = fract(i_flTime)*(1.+w+abs(tan_rad))-w-step(.0, tan_rad)*abs(tan_rad);
+      float x = v_uv0.x-(1.-v_uv0.y)*tan_rad;
+      col.rgb = mix(col.rgb, i_flColor.rgb, step(t, x)*step(x, t+w)*(1.-smoothstep(.0, w*.5, abs(x-t-w*.5)))*i_flColor.a);
+    }
+
+    //阴影
+    if(i_shadow > .5) {
+      vec4 sc = step(.5, i_shadow)*vec4(i_shadowColor.rgb, i_shadowColor.a*getA(vec2(uv)+i_shadowOffset));
+      col = transCol(col, sc);
+    }
+
+    //描边
+    if(i_outline > .5) {
+      float ola = .0;
+      float ola_shadow = .0;
+      float rot = PI*0.5;
+      vec2 tuv = uv+step(.5, i_shadow)*i_shadowOffset;
+      for(float i=.0;i<accuracy;i++) {
+        float rad = PI*2./accuracy*i;
+        vec2 uv_d;
+        uv_d.x = cos(rot)*cos(rad)*i_outlineWidth.y-sin(rot)*sin(rad)*i_outlineWidth.x;
+        uv_d.y = sin(rot)*cos(rad)*i_outlineWidth.y+cos(rot)*sin(rad)*i_outlineWidth.x;
+        ola = max(ola, getA(tuv+uv_d));
+        ola_shadow = step(.5, i_olShadow)*max(ola_shadow, getA(tuv+i_olShadowOffset+uv_d));
+      }
+      vec4 olc = vec4(i_outlineColor.rgb, i_outlineColor.a*ola);
+      col = transCol(col, olc);
+      //描边阴影
+      vec4 olc_shadow = step(.5, i_olShadow)*vec4(i_olShadowColor.rgb, i_olShadowColor.a*ola_shadow);
+      col = transCol(col, olc_shadow);
+    }
+
+    //外发光
+    if(i_glow > .5) {
+      float ga = .0;
+      float rot = PI*0.5;
+      float tx = i_glowWidth.x + step(.5, i_outline)*i_outlineWidth.x;
+      float ty = i_glowWidth.y + step(.5, i_outline)*i_outlineWidth.y;
+      if(i_glow > 2.5) {
+        for(float i=.0;i<accuracy;i++) {
+          float rad = PI*2./accuracy*i;
+          for(float j=.0;j<32.;j++) {
+            vec2 uv_d;
+            uv_d.x = cos(rot)*cos(rad)*ty+-sin(rot)*sin(rad)*tx;
+            uv_d.y = sin(rot)*cos(rad)*ty+cos(rot)*sin(rad)*tx;
+            uv_d *= j/32.;
+            ga += getA(uv+uv_d);
+          }
+        }
+        ga /= accuracy*32.;
+      }
+      else if(i_glow > 1.5) {
+        for(float i=.0;i<accuracy;i++) {
+          float rad = PI*2./accuracy*i;
+          for(float j=.0;j<16.;j++) {
+            vec2 uv_d;
+            uv_d.x = cos(rot)*cos(rad)*ty-sin(rot)*sin(rad)*tx;
+            uv_d.y = sin(rot)*cos(rad)*ty+cos(rot)*sin(rad)*tx;
+            uv_d *= j/16.;
+            ga += getA(uv+uv_d);
+          }
+        }
+        ga /= accuracy*16.;
+      }
+      else {
+        for(float i=.0;i<accuracy;i++) {
+          float rad = PI*2./accuracy*i;
+          for(float j=.0;j<8.;j++) {
+            vec2 uv_d;
+            uv_d.x = cos(rot)*cos(rad)*ty-sin(rot)*sin(rad)*tx;
+            uv_d.y = sin(rot)*cos(rad)*ty+cos(rot)*sin(rad)*tx;
+            uv_d *= j/8.;
+            ga += getA(uv+uv_d);
+          }
+        }
+        ga /= accuracy*8.;
+      }
+      ga = smoothstep(.0, 1., ga*i_glowDepth);
+      vec4 gc = vec4(i_glowColor.rgb, i_glowColor.a*ga);
+      col = transCol(col, gc);
+    }
+
+    //添加整体透明度
+    col.a *= i_alpha;
+    gl_FragColor = col;
+  }
+}%
