@@ -156,7 +156,7 @@ CCProgram fs %{
     col += step(1.5, i_gradient)*step(.0, uv.y)*mix(i_color1, i_color2, 1.-uv.y*2./scale);
     col += step(1.5, i_gradient)*step(uv.y, .0)*mix(i_color2, i_color3, -uv.y*2./scale);
     //双色
-    col += step(.5, i_gradient)*step(i_gradient, 1.5)*mix(i_color1, i_color2, uv.y/scale+.5);
+    col += step(.5, i_gradient)*step(i_gradient, 1.5)*mix(i_color1, i_color2, .5-uv.y/scale);
     //单色
     col += step(i_gradient, .5)*i_color1;
     col.rgb *= step(.0, a);

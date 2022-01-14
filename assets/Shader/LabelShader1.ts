@@ -130,7 +130,7 @@ export default class LabelShader1 extends cc.Component {
 
     //-----------------------文字颜色、渐变
     @property({
-        tooltip:'文字颜色\nNone：单色，使用节点color\nOneColor：单色，使用color1\nTwoColor：渐变色-双色\nTriColor：渐变色-三色',
+        tooltip:'文字颜色\nNone 0：单色，使用节点color\nOneColor 1：单色，使用color1\nTwoColor 2：渐变色-双色\nTriColor 3：渐变色-三色',
         type:cc.Enum(Gradient),
     })
     gradient = Gradient.None;
@@ -155,7 +155,7 @@ export default class LabelShader1 extends cc.Component {
 
     //-----------------------外发光
     @property({
-        tooltip:'外发光，外发光较耗性能\nNone：不使用\nLowp：低精度（建议）\nMediump: 中等精度\nHighp：高精度',
+        tooltip:'外发光，外发光较耗性能\nNone 0：不使用\nLowp 1：低精度（建议）\nMediump 2: 中等精度\nHighp 3：高精度',
         type:cc.Enum(GlowLevel),
     })
     glow = GlowLevel.None;
@@ -210,10 +210,22 @@ export default class LabelShader1 extends cc.Component {
         this.use();
     }
 
+    getAlpha():number {
+        let alpha = 1;
+        let func = (node:cc.Node)=>{
+            alpha *= node.opacity/255;
+            if(node.parent && node.parent.name != 'Canvas') {
+                func(node.parent);
+            }
+        }
+        func(this.node);
+        return alpha;
+    }
+
     use() {
         if(!this._mtl) return;
         this._mtl.setProperty('i_resolution', [this.node.width, this.node.height]);
-        this._mtl.setProperty('i_alpha', this.node.opacity/255);
+        this._mtl.setProperty('i_alpha', this.getAlpha());
         this._mtl.setProperty('i_shadow', this.shadowUse ? 1 : 0);
         this._mtl.setProperty('i_shadowOffset', [-this.shadowOffset.x/this.node.width, -this.shadowOffset.y/this.node.height]);
         this._mtl.setProperty('i_shadowColor', [this.shadowColor.r/255, this.shadowColor.g/255, this.shadowColor.b/255, this.shadowColor.a/255]);
