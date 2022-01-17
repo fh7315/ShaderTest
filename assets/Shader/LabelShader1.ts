@@ -210,22 +210,9 @@ export default class LabelShader1 extends cc.Component {
         this.use();
     }
 
-    getAlpha():number {
-        let alpha = 1;
-        let func = (node:cc.Node)=>{
-            alpha *= node.opacity/255;
-            if(node.parent && node.parent.name != 'Canvas') {
-                func(node.parent);
-            }
-        }
-        func(this.node);
-        return alpha;
-    }
-
     use() {
         if(!this._mtl) return;
         this._mtl.setProperty('i_resolution', [this.node.width, this.node.height]);
-        this._mtl.setProperty('i_alpha', this.getAlpha());
         this._mtl.setProperty('i_shadow', this.shadowUse ? 1 : 0);
         this._mtl.setProperty('i_shadowOffset', [-this.shadowOffset.x/this.node.width, -this.shadowOffset.y/this.node.height]);
         this._mtl.setProperty('i_shadowColor', [this.shadowColor.r/255, this.shadowColor.g/255, this.shadowColor.b/255, this.shadowColor.a/255]);

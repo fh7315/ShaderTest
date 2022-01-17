@@ -25,7 +25,6 @@ CCEffect %{
         i_outlineWidth: { value: [0.01, 0.01] }
         i_olShadowOffset: { value: [0.01, 0.01] }
         i_glowWidth: { value: [0.1, 0.1] }
-        i_alpha: { value: 1 }
         i_shadow: { value: 0 }
         i_outline: { value: 0 }
         i_olShadow: { value: 0 }
@@ -103,7 +102,6 @@ CCProgram fs %{
     vec2 i_outlineWidth;
     vec2 i_olShadowOffset;
     vec2 i_glowWidth;
-    float i_alpha;
     float i_shadow;
     float i_outline;
     float i_olShadow;
@@ -250,7 +248,7 @@ CCProgram fs %{
     }
 
     //添加整体透明度
-    col.a *= i_alpha;
+    col.a *= v_color.a;
     gl_FragColor = col;
   }
 }%
