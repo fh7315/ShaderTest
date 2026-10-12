@@ -1,0 +1,15 @@
+{
+  "__type__": "cc.Material",
+  "_name": "TAA_spine",
+  "_objFlags": 0,
+  "_native": "",
+  "_effectAsset": {
+    "__uuid__": "94bc7d82-afbb-4d66-b7de-de65aa661d03"
+  },
+  "_techniqueIndex": 0,
+  "_techniqueData": {
+    "0": {
+      "defines": {}
+    }
+  }
+}

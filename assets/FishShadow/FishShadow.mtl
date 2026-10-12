@@ -1,0 +1,18 @@
+{
+  "__type__": "cc.Material",
+  "_name": "FishShadow",
+  "_objFlags": 0,
+  "_native": "",
+  "_effectAsset": {
+    "__uuid__": "eb83c96d-ad64-4c33-93c1-33d2220ea1b9"
+  },
+  "_techniqueIndex": 0,
+  "_techniqueData": {
+    "0": {
+      "defines": {
+        "USE_TINT": false,
+        "USE_ALPHA_TEST": false
+      }
+    }
+  }
+}

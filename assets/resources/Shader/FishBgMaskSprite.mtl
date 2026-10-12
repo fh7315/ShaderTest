@@ -1,0 +1,20 @@
+{
+  "__type__": "cc.Material",
+  "_name": "FishBgMask",
+  "_objFlags": 0,
+  "_native": "",
+  "_effectAsset": {
+    "__uuid__": "66886d6e-e2c7-4cb5-ae36-183f06f9b22d"
+  },
+  "_techniqueIndex": 0,
+  "_techniqueData": {
+    "0": {
+      "props": {
+        "outSize": 0
+      },
+      "defines": {
+        "USE_TEXTURE": true
+      }
+    }
+  }
+}

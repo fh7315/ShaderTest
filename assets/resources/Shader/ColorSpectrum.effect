@@ -1,0 +1,100 @@
+// Copyright (c) 2017-2018 Xiamen Yaji Software Co., Ltd.  
+
+CCEffect %{
+  techniques:
+  - passes:
+    - vert: vs
+      frag: fs
+      blendState:
+        targets:
+        - blend: true
+      rasterizerState:
+        cullMode: none
+      properties:
+        texture: { value: white }
+        alphaThreshold: { value: 0.5 }
+}%
+
+
+CCProgram vs %{
+  precision highp float;
+
+  #include <cc-global>
+  #include <cc-local>
+
+  in vec3 a_position;
+  in vec4 a_color;
+  out vec4 v_color;
+
+  #if USE_TEXTURE
+  in vec2 a_uv0;
+  out vec2 v_uv0;
+  #endif
+
+  void main () {
+    vec4 pos = vec4(a_position, 1);
+
+    #if CC_USE_MODEL
+    pos = cc_matViewProj * cc_matWorld * pos;
+    #else
+    pos = cc_matViewProj * pos;
+    #endif
+
+    #if USE_TEXTURE
+    v_uv0 = a_uv0;
+    #endif
+
+    v_color = a_color;
+
+    gl_Position = pos;
+  }
+}%
+
+
+CCProgram fs %{
+  precision highp float;
+  
+  #include <alpha-test>
+  #include <texture>
+
+  in vec4 v_color;
+
+  #if USE_TEXTURE
+  in vec2 v_uv0;
+  uniform sampler2D texture;
+  #endif
+
+  const float PI = 3.1415926;
+  const vec2 cd = vec2(.0, .15); //调色板中心点
+  const float disMax = .3; //调色板半径
+  
+  float getA(vec2 p) {
+    vec2 tp = vec2(p.x+.5, .5-p.y);
+    return texture2D(texture, tp).a*v_color.a;
+  }
+
+  void main () {
+    vec2 uv = vec2(v_uv0.x-.5, .5-v_uv0.y);
+    vec3 col = vec3(.1, .2, .3); //背景色
+    
+    vec4 c0 = vec4(1., .0, .0, 1.);
+    float dis = distance(uv, cd);
+    float rad = acos((uv.x-cd.x)/dis)/PI*.5;
+    rad += step(.0, uv.y-cd.y)*(1.-rad*2.);
+
+    c0.b += smoothstep(.0, 1./6., rad);
+    c0.r -= smoothstep(1./6., 2./6., rad);
+    c0.g += smoothstep(2./6., 3./6., rad);
+    c0.b -= smoothstep(3./6., 4./6., rad);
+    c0.r += smoothstep(4./6., 5./6., rad);
+    c0.g -= smoothstep(5./6., 6./6., rad);
+
+    c0.rgb = mix(vec3(1.), c0.rgb, dis/disMax);
+
+    c0.a *= step(dis, disMax)*smoothstep(.5-disMax, .5-disMax*0.98, .5-dis);
+
+    col = mix(col, c0.rgb, c0.a);
+  
+    gl_FragColor = vec4(col, getA(uv));
+  }
+}%

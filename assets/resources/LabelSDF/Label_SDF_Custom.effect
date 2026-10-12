@@ -1,0 +1,170 @@
+// Copyright (c) 2017-2018 Xiamen Yaji Software Co., Ltd.  
+
+CCEffect %{
+  techniques:
+  - passes:
+    - vert: vs
+      frag: fs
+      blendState:
+        targets:
+        - blend: true
+      rasterizerState:
+        cullMode: none
+      properties:
+        i_color1: { value: [1, 1, 1, 1], editor: { type: color }  }
+        i_color2: { value: [0, 0, 1, 1], editor: { type: color }  }
+        i_color3: { value: [1, 1, 1, 1], editor: { type: color }  }
+        i_outlineColor: { value: [1, 0, 0, 1], editor: { type: color }  }
+        i_shadowColor: { value: [0, 1, 0, 1], editor: { type: color }  }
+        i_bloomColor: { value: [1, 1, 0, 1], editor: { type: color }  }
+        i_shadowOffset: { value: [0, 0] }
+        i_bloomDepth: { value: [1, 2] }
+        i_gradient: { value: 0 }
+        i_bold: { value: 0.5 }
+        i_outlineBold: { value: 0.5 }
+        i_outline: { value: 0 }
+        i_shadow: { value: 0 }
+        i_bloom: { value: 0 }
+        i_bloomSpeed: { value: 0 }
+        texture: { value: white }
+        alphaThreshold: { value: 0.5 }
+}%
+
+
+CCProgram vs %{
+  precision highp float;
+
+  #include <cc-global>
+  #include <cc-local>
+
+  in vec3 a_position;
+  in vec4 a_color;
+  out vec4 v_color;
+
+  #if USE_TEXTURE
+  in vec2 a_uv0;
+  out vec2 v_uv0;
+  #endif
+
+  void main () {
+    vec4 pos = vec4(a_position, 1);
+
+    #if CC_USE_MODEL
+    pos = cc_matViewProj * cc_matWorld * pos;
+    #else
+    pos = cc_matViewProj * pos;
+    #endif
+
+    #if USE_TEXTURE
+    v_uv0 = a_uv0;
+    #endif
+
+    v_color = a_color;
+
+    gl_Position = pos;
+  }
+}%
+
+
+CCProgram fs %{
+  #extension GL_OES_standard_derivatives: enable
+  precision highp float;
+  
+  #include <cc-global>
+  #include <alpha-test>
+  #include <texture>
+
+  in vec4 v_color;
+
+  #if USE_TEXTURE
+  in vec2 v_uv0;
+  uniform sampler2D texture;
+  #endif
+  
+  uniform UARGS {
+    vec4 i_color1;
+    vec4 i_color2;
+    vec4 i_color3;
+    vec4 i_outlineColor;
+    vec4 i_shadowColor;
+    vec4 i_bloomColor;
+    vec2 i_shadowOffset;
+    vec2 i_bloomDepth;
+    float i_gradient;
+    float i_bold;
+    float i_outlineBold;
+    float i_outline;
+    float i_shadow;
+    float i_bloom;
+    float i_bloomSpeed;
+  };
+
+  void mix1(inout vec4 c, inout float a, vec4 c1, float a1) {
+      c.rgb = mix(c1, c, a).rgb;
+      c.a += (1. - a) * a1 * c1.a;
+      a += (1. - a) * a1;
+  }
+
+  void mix2(inout vec4 c, vec4 c1, float a1) {
+      c.rgb = mix(c1, c, c.a).rgb;
+      c.a += (1. - c.a) * a1 * c1.a;
+  }
+
+  float transAlpha(float alpha, float w, float s) {
+    float a = smoothstep(w - s, w + s, alpha);
+    return a;
+  }
+
+  void main () {
+    vec4 o = vec4(0);
+    float oa = 1.;
+    float s = 250.*dFdx(v_uv0).x;
+    vec4 c = texture2D(texture, v_uv0);
+    float a = c.a;
+
+    //打底
+    vec4 c1 = i_color1;
+    if(i_gradient > 1.5) {
+      c1 = step(c.r, 0.5) * mix(i_color1, i_color2, c.r * 2.0);
+      c1 += step(0.5, c.r) * mix(i_color2, i_color3, (c.r - 0.5) * 2.0);
+    }
+    else if(i_gradient > 0.5) {
+      c1 = mix(i_color1, i_color2, c.r);
+    }
+    float w1 = i_bold;
+    float a1 = transAlpha(a, w1, s);
+    o.rgb = c1.rgb;
+    o.a = a1 * c1.a;
+    oa = a1;
+
+    //描边
+    if(i_outline > 0.5) {
+      vec4 c2 = i_outlineColor;
+      float w2 = i_outlineBold;
+      float a2 = transAlpha(a, w2, s);
+      mix1(o, oa, c2, a2);
+    }
+
+    //阴影
+    if(i_shadow > 0.5) {
+      vec4 c3 = i_shadowColor;
+      float w3 = min(i_bold, i_outlineBold);
+      float a3 = transAlpha(texture2D(texture, v_uv0 + i_shadowOffset).a, w3, s);
+      mix1(o, oa, c3, a3);
+    }
+    
+    //辉光
+    if(i_bloom > 0.5) {
+      vec4 c4 = i_bloomColor;
+      float w4 = 0.5;
+      float t4 = i_bloomDepth.x + (sin(cc_time.x * i_bloomSpeed - 1.570796) + 1.) * 0.25 * (i_bloomDepth.y - i_bloomDepth.x);
+      float a4 = smoothstep(.0, w4, a) * smoothstep(.0, w4, (1. - a)) * t4;
+      mix2(o, c4, a4);
+    }
+
+    //整体透明度
+    o *= v_color;
+
+    gl_FragColor = o;
+  }
+}%

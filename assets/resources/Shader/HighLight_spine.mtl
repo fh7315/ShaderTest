@@ -1,0 +1,15 @@
+{
+  "__type__": "cc.Material",
+  "_name": "HighLight_spine",
+  "_objFlags": 0,
+  "_native": "",
+  "_effectAsset": {
+    "__uuid__": "409d7f25-5998-4337-a706-14825f3382a0"
+  },
+  "_techniqueIndex": 0,
+  "_techniqueData": {
+    "0": {
+      "defines": {}
+    }
+  }
+}

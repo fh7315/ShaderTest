@@ -1,16 +1,10 @@
-const {ccclass, property, menu, requireComponent, disallowMultiple, executeInEditMode} = cc._decorator;
+const {ccclass, property, menu, requireComponent, disallowMultiple, executeInEditMode, playOnFocus} = cc._decorator;
 
 const Gradient = cc.Enum({
     None: 0,
     OneColor: 1,
     TwoColor: 2,
     TriColor: 3,
-})
-const GlowLevel = cc.Enum({
-    None: 0,
-    Lowp: 1,
-    Mediump: 2,
-    Highp: 3,
 })
 
 /**
@@ -20,13 +14,13 @@ const GlowLevel = cc.Enum({
  * - 描边阴影
  * - 颜色渐变
  * - 扫光效果
- * - 外发光
  */
 @ccclass
 @menu('UI/LabelShader1')
 @requireComponent(cc.Label)
 @disallowMultiple()
 @executeInEditMode()
+@playOnFocus()
 export default class LabelShader1 extends cc.Component {
 
     //-----------------------阴影
@@ -153,37 +147,6 @@ export default class LabelShader1 extends cc.Component {
     })
     color3:cc.Color = cc.color(0, 0, 255, 255);
 
-    //-----------------------外发光
-    @property({
-        tooltip:'外发光，外发光较耗性能\nNone 0：不使用\nLowp 1：低精度（建议）\nMediump 2: 中等精度\nHighp 3：高精度',
-        type:cc.Enum(GlowLevel),
-    })
-    glow = GlowLevel.None;
-    @property({
-        tooltip:'外发光宽度（像素）',
-        min: 1,
-        visible:function(){
-            return this.glow > GlowLevel.None;
-        }
-    })
-    glowWidth:number = 10;
-    @property({
-        tooltip:'外发光颜色深度',
-        min: 1,
-        max: 32,
-        visible:function(){
-            return this.glow > GlowLevel.None;
-        }
-    })
-    glowDepth:number = 2;
-    @property({
-        tooltip:'外发光颜色',
-        visible:function(){
-            return this.glow > GlowLevel.None;
-        }
-    })
-    glowColor:cc.Color = cc.color(255, 255, 255, 255);
-
     private _mtl:cc.Material = null;
     private _time:number = 0;
 
@@ -241,10 +204,6 @@ export default class LabelShader1 extends cc.Component {
         this._mtl.setProperty('i_flRot', Math.atan(Math.tan(Math.PI*this.flRot/180.)*this.node.height/this.node.width)*180./Math.PI);
         this._mtl.setProperty('i_flWidth', this.flWidth/this.node.width);
         this._mtl.setProperty('i_flColor', [this.flColor.r/255, this.flColor.g/255, this.flColor.b/255, this.flColor.a/255]);
-        this._mtl.setProperty('i_glow', this.glow);
-        this._mtl.setProperty('i_glowWidth', [this.glowWidth/this.node.width, this.glowWidth/this.node.height]);
-        this._mtl.setProperty('i_glowDepth', this.glowDepth);
-        this._mtl.setProperty('i_glowColor', [this.glowColor.r/255, this.glowColor.g/255, this.glowColor.b/255, this.glowColor.a/255]);
     }
 
     update(dt:number) {

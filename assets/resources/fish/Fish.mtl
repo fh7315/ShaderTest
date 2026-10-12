@@ -1,0 +1,20 @@
+{
+  "__type__": "cc.Material",
+  "_name": "Fish",
+  "_objFlags": 0,
+  "_native": "",
+  "_effectAsset": {
+    "__uuid__": "9f8cf5ae-65a5-46a0-9a12-42345186317f"
+  },
+  "_techniqueIndex": 0,
+  "_techniqueData": {
+    "0": {
+      "defines": {
+        "USE_TEXTURE": true
+      },
+      "props": {
+        "u_uvRotated": 0
+      }
+    }
+  }
+}

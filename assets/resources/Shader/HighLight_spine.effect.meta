@@ -1,0 +1,17 @@
+{
+  "ver": "1.0.25",
+  "uuid": "409d7f25-5998-4337-a706-14825f3382a0",
+  "compiledShaders": [
+    {
+      "glsl1": {
+        "vert": "\nprecision highp float;\nuniform mat4 cc_matViewProj;\nuniform mat4 cc_matWorld;\nattribute vec3 a_position;\nattribute vec4 a_color;\n#if USE_TINT\n  attribute vec4 a_color0;\n#endif\nattribute vec2 a_uv0;\nvarying vec2 v_uv0;\nvarying vec4 v_light;\n#if USE_TINT\n  varying vec4 v_dark;\n#endif\nvoid main () {\n  mat4 mvp;\n  #if CC_USE_MODEL\n    mvp = cc_matViewProj * cc_matWorld;\n  #else\n    mvp = cc_matViewProj;\n  #endif\n  v_uv0 = a_uv0;\n  v_light = a_color;\n  #if USE_TINT\n    v_dark = a_color0;\n  #endif\n  gl_Position = mvp * vec4(a_position, 1);\n}",
+        "frag": "\nprecision highp float;\nuniform sampler2D texture;\nvarying vec2 v_uv0;\nvarying vec4 v_light;\n#if USE_TINT\n  varying vec4 v_dark;\n#endif\n#if USE_ALPHA_TEST\n#endif\nvoid main () {\n  vec4 c0 = texture2D(texture, v_uv0);\n  c0.rgb = vec3(1., .0, .0);\n  c0 *= v_light;\n  gl_FragColor = c0;\n}"
+      },
+      "glsl3": {
+        "vert": "\nprecision highp float;\nuniform CCGlobal {\n  mat4 cc_matView;\n  mat4 cc_matViewInv;\n  mat4 cc_matProj;\n  mat4 cc_matProjInv;\n  mat4 cc_matViewProj;\n  mat4 cc_matViewProjInv;\n  vec4 cc_cameraPos;\n  vec4 cc_time;\n  mediump vec4 cc_screenSize;\n  mediump vec4 cc_screenScale;\n};\nuniform CCLocal {\n  mat4 cc_matWorld;\n  mat4 cc_matWorldIT;\n};\nin vec3 a_position;\nin vec4 a_color;\n#if USE_TINT\n  in vec4 a_color0;\n#endif\nin vec2 a_uv0;\nout vec2 v_uv0;\nout vec4 v_light;\n#if USE_TINT\n  out vec4 v_dark;\n#endif\nvoid main () {\n  mat4 mvp;\n  #if CC_USE_MODEL\n    mvp = cc_matViewProj * cc_matWorld;\n  #else\n    mvp = cc_matViewProj;\n  #endif\n  v_uv0 = a_uv0;\n  v_light = a_color;\n  #if USE_TINT\n    v_dark = a_color0;\n  #endif\n  gl_Position = mvp * vec4(a_position, 1);\n}",
+        "frag": "\nprecision highp float;\nuniform CCGlobal {\n  mat4 cc_matView;\n  mat4 cc_matViewInv;\n  mat4 cc_matProj;\n  mat4 cc_matProjInv;\n  mat4 cc_matViewProj;\n  mat4 cc_matViewProjInv;\n  vec4 cc_cameraPos;\n  vec4 cc_time;\n  mediump vec4 cc_screenSize;\n  mediump vec4 cc_screenScale;\n};\nuniform sampler2D texture;\nin vec2 v_uv0;\nin vec4 v_light;\n#if USE_TINT\n  in vec4 v_dark;\n#endif\n#if USE_ALPHA_TEST\n  uniform ALPHA_TEST {\n    float alphaThreshold;\n  };\n#endif\nvoid main () {\n  vec4 c0 = texture2D(texture, v_uv0);\n  c0.rgb = vec3(1., .0, .0);\n  c0 *= v_light;\n  gl_FragColor = c0;\n}"
+      }
+    }
+  ],
+  "subMetas": {}
+}

@@ -1,0 +1,128 @@
+// Copyright (c) 2017-2018 Xiamen Yaji Software Co., Ltd.  
+
+CCEffect %{
+  techniques:
+  - passes:
+    - vert: vs
+      frag: fs
+      blendState:
+        targets:
+        - blend: true
+      rasterizerState:
+        cullMode: none
+      properties:
+        i_color: { value: [1, 1, 1, 1] }
+        i_uvOffset: { value: [0, 0, 1, 1] }
+        i_resolution: { value: [1, 1] }
+        i_uvRotated: { value: 0 }
+        i_width: { value: 0.05 }
+        texture: { value: white }
+        alphaThreshold: { value: 0.5 }
+}%
+
+
+CCProgram vs %{
+  precision highp float;
+
+  #include <cc-global>
+  #include <cc-local>
+
+  in vec3 a_position;
+  in vec4 a_color;
+  out vec4 v_color;
+
+  #if USE_TEXTURE
+  in vec2 a_uv0;
+  out vec2 v_uv0;
+  #endif
+
+  void main () {
+    vec4 pos = vec4(a_position, 1);
+
+    #if CC_USE_MODEL
+    pos = cc_matViewProj * cc_matWorld * pos;
+    #else
+    pos = cc_matViewProj * pos;
+    #endif
+
+    #if USE_TEXTURE
+    v_uv0 = a_uv0;
+    #endif
+
+    v_color = a_color;
+
+    gl_Position = pos;
+  }
+}%
+
+
+CCProgram fs %{
+  precision highp float;
+  
+  #include <cc-global>
+  #include <alpha-test>
+  #include <texture>
+
+  in vec4 v_color;
+
+  #if USE_TEXTURE
+  in vec2 v_uv0;
+  uniform sampler2D texture;
+  #endif
+
+  uniform UARGS {
+    vec4 i_color;
+    vec4 i_uvOffset;
+    vec2 i_resolution;
+    float i_uvRotated;
+    float i_width;
+  };
+  
+  vec2 transUV(vec2 p) {
+    vec2 uv;
+    uv.x = (p.x - i_uvOffset.x) / (i_uvOffset.z - i_uvOffset.x);
+    uv.y = (p.y - i_uvOffset.y) / (i_uvOffset.w - i_uvOffset.y);
+    if(i_uvRotated > 0.5) {
+        float temp = uv.x;
+        uv.x = uv.y;
+        uv.y = 1.0 - temp;
+    }
+    return uv;
+  }
+  
+  vec2 reverseTransUV(vec2 p) {
+    vec2 tp = p;
+    if(i_uvRotated > 0.5) {
+        tp.y = p.x;
+        tp.x = 1.0 - p.y;
+    }
+    vec2 uv;
+    uv.x = tp.x * (i_uvOffset.z - i_uvOffset.x) + i_uvOffset.x;
+    uv.y = tp.y * (i_uvOffset.w - i_uvOffset.y) + i_uvOffset.y;
+    return uv;
+  }
+
+  void main () {
+    vec2 uv = transUV(v_uv0);
+    uv.x = uv.x-.5;
+    uv.y = .5-uv.y;
+
+    vec2 tuv = uv;
+    tuv.x *= 1.+i_width;
+    tuv.y *= 1.+i_width*i_resolution.x/i_resolution.y;
+    float tmp = step(abs(tuv.x), 0.5)*step(abs(tuv.y), 0.5);
+    tuv.x = tuv.x+.5;
+    tuv.y = .5-tuv.y;
+    tuv = reverseTransUV(tuv);
+    vec4 c0 = texture2D(texture, tuv)*tmp;
+
+    vec4 c1 = vec4(i_color.rgb, i_color.a*texture2D(texture, v_uv0).a);
+    // c1.a *= abs(fract(cc_time.x*0.5)-0.5)*0.8 + 0.2;
+    c1.a *= abs(sin(cc_time.x*2.))*0.6 + 0.4;
+
+    vec4 o = mix(c1, c0, c0.a);
+
+    o.a *= v_color.a;
+    gl_FragColor = o;
+  }
+}%

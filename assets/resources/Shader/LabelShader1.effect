@@ -12,31 +12,27 @@ CCEffect %{
       rasterizerState:
         cullMode: none
       properties:
-        i_shadowColor: { value: [0, 0, 0, 0.5] }
-        i_outlineColor: { value: [0, 0, 0, 1] }
-        i_olShadowColor: { value: [0, 0, 0, 0.5] }
-        i_color1: { value: [1, 0, 0, 1] }
-        i_color2: { value: [0, 1, 0, 1] }
-        i_color3: { value: [0, 0, 1, 1] }
-        i_flColor: { value: [1, 1, 1, 1] }
-        i_glowColor: { value: [1, 1, 1, 1] }
-        i_resolution: { value: [1, 1] }
-        i_shadowOffset: { value: [0.01, 0.01] }
-        i_outlineWidth: { value: [0.01, 0.01] }
-        i_olShadowOffset: { value: [0.01, 0.01] }
-        i_glowWidth: { value: [0.1, 0.1] }
-        i_shadow: { value: 0 }
-        i_outline: { value: 0 }
-        i_olShadow: { value: 0 }
-        i_gradient: { value: 0 }
-        i_flowLight: { value: 0 }
-        i_flTime: { value: 0 }
-        i_flRot: { value: 0 }
-        i_flWidth: { value: 0.05 }
-        i_glow: { value: 0 }
-        i_glowDepth: { value: 2. }
-        texture: { value: white }
-        alphaThreshold: { value: 0.5 }
+        # i_shadowColor: { value: [0, 0, 0, 0.5], editor: { type: color } }
+        # i_outlineColor: { value: [0, 0, 0, 1], editor: { type: color } }
+        # i_olShadowColor: { value: [0, 0, 0, 0.5], editor: { type: color } }
+        # i_color1: { value: [1, 0, 0, 1], editor: { type: color } }
+        # i_color2: { value: [0, 1, 0, 1], editor: { type: color } }
+        # i_color3: { value: [0, 0, 1, 1], editor: { type: color } }
+        # i_flColor: { value: [1, 1, 1, 1], editor: { type: color } }
+        # i_resolution: { value: [1, 1] }
+        # i_shadowOffset: { value: [0.01, 0.01] }
+        # i_outlineWidth: { value: [0.01, 0.01] }
+        # i_olShadowOffset: { value: [0.01, 0.01] }
+        # i_shadow: { value: 0 }
+        # i_outline: { value: 0 }
+        # i_olShadow: { value: 0 }
+        # i_gradient: { value: 0 }
+        # i_flowLight: { value: 0 }
+        # i_flTime: { value: 0 }
+        # i_flRot: { value: 0 }
+        # i_flWidth: { value: 0.05 }
+        # texture: { value: white }
+        # alphaThreshold: { value: 0.5 }
 }%
 
 
@@ -96,12 +92,10 @@ CCProgram fs %{
     vec4 i_color2;  
     vec4 i_color3;
     vec4 i_flColor;
-    vec4 i_glowColor;
     vec2 i_resolution; 
     vec2 i_shadowOffset;
     vec2 i_outlineWidth;
     vec2 i_olShadowOffset;
-    vec2 i_glowWidth;
     float i_shadow;
     float i_outline;
     float i_olShadow;
@@ -110,8 +104,6 @@ CCProgram fs %{
     float i_flTime;
     float i_flRot;
     float i_flWidth;
-    float i_glow;
-    float i_glowDepth;
   };
 
   const float PI = 3.1415;
@@ -133,19 +125,24 @@ CCProgram fs %{
   }
 
   void main () {
-    //计算缩放比例，防止超框截断（只考虑宽）
+    //计算缩放比例，防止超框截断
+    //考虑宽
     float dw = .0;
     dw += step(.5, i_shadow)*abs(i_shadowOffset.x);
     dw += step(.5, i_outline)*abs(i_outlineWidth.x*2.);
     dw += step(.5, i_outline)*step(.5, i_olShadow)*abs(i_olShadowOffset.x);
-    dw += step(.5, i_glow)*abs(i_glowWidth.x*2.);
     float scale = 1.+dw;
+    //考虑高
+    float dh = .0;
+    dh += step(.5, i_shadow)*abs(i_shadowOffset.y);
+    dh += step(.5, i_outline)*abs(i_outlineWidth.y*2.);
+    dh += step(.5, i_outline)*step(.5, i_olShadow)*abs(i_olShadowOffset.y);
+    scale = max(1.+dh, scale);
 
     //uv变换
     vec2 uv = vec2(v_uv0.x-.5, .5-v_uv0.y)*scale;
     uv -= step(.5, i_shadow)*i_shadowOffset*0.5;
-    vec2 olsuv = vec2(i_olShadowOffset.x+sign(i_olShadowOffset.x)*i_outlineWidth.x, i_olShadowOffset.y+sign(i_olShadowOffset.y)*i_outlineWidth.y);
-    uv -= step(.5, i_outline)*step(.5, i_olShadow)*olsuv*0.5;
+    uv -= step(.5, i_outline)*step(.5, i_olShadow)*i_olShadowOffset*0.5;
 
     //颜色、渐变
     vec4 col = vec4(.0);
@@ -195,56 +192,6 @@ CCProgram fs %{
       //描边阴影
       vec4 olc_shadow = step(.5, i_olShadow)*vec4(i_olShadowColor.rgb, i_olShadowColor.a*ola_shadow);
       col = transCol(col, olc_shadow);
-    }
-
-    //外发光
-    if(i_glow > .5) {
-      float ga = .0;
-      float rot = PI*0.5;
-      float tx = i_glowWidth.x + step(.5, i_outline)*i_outlineWidth.x;
-      float ty = i_glowWidth.y + step(.5, i_outline)*i_outlineWidth.y;
-      if(i_glow > 2.5) {
-        for(float i=.0;i<accuracy;i++) {
-          float rad = PI*2./accuracy*i;
-          for(float j=.0;j<32.;j++) {
-            vec2 uv_d;
-            uv_d.x = cos(rot)*cos(rad)*ty+-sin(rot)*sin(rad)*tx;
-            uv_d.y = sin(rot)*cos(rad)*ty+cos(rot)*sin(rad)*tx;
-            uv_d *= j/32.;
-            ga += getA(uv+uv_d);
-          }
-        }
-        ga /= accuracy*32.;
-      }
-      else if(i_glow > 1.5) {
-        for(float i=.0;i<accuracy;i++) {
-          float rad = PI*2./accuracy*i;
-          for(float j=.0;j<16.;j++) {
-            vec2 uv_d;
-            uv_d.x = cos(rot)*cos(rad)*ty-sin(rot)*sin(rad)*tx;
-            uv_d.y = sin(rot)*cos(rad)*ty+cos(rot)*sin(rad)*tx;
-            uv_d *= j/16.;
-            ga += getA(uv+uv_d);
-          }
-        }
-        ga /= accuracy*16.;
-      }
-      else {
-        for(float i=.0;i<accuracy;i++) {
-          float rad = PI*2./accuracy*i;
-          for(float j=.0;j<8.;j++) {
-            vec2 uv_d;
-            uv_d.x = cos(rot)*cos(rad)*ty-sin(rot)*sin(rad)*tx;
-            uv_d.y = sin(rot)*cos(rad)*ty+cos(rot)*sin(rad)*tx;
-            uv_d *= j/8.;
-            ga += getA(uv+uv_d);
-          }
-        }
-        ga /= accuracy*8.;
-      }
-      ga = smoothstep(.0, 1., ga*i_glowDepth);
-      vec4 gc = vec4(i_glowColor.rgb, i_glowColor.a*ga);
-      col = transCol(col, gc);
     }
 
     //添加整体透明度

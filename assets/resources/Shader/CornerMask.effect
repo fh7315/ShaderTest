@@ -1,0 +1,87 @@
+// Copyright (c) 2017-2018 Xiamen Yaji Software Co., Ltd.  
+
+CCEffect %{
+  techniques:
+  - passes:
+    - vert: vs
+      frag: fs
+      blendState:
+        targets:
+        - blend: true
+      rasterizerState:
+        cullMode: none
+      properties:
+        texture: { value: white }
+        alphaThreshold: { value: 0.5 }
+}%
+
+
+CCProgram vs %{
+  precision highp float;
+
+  #include <cc-global>
+  #include <cc-local>
+
+  in vec3 a_position;
+  in vec4 a_color;
+  out vec4 v_color;
+
+  #if USE_TEXTURE
+  in vec2 a_uv0;
+  out vec2 v_uv0;
+  #endif
+
+  void main () {
+    vec4 pos = vec4(a_position, 1);
+
+    #if CC_USE_MODEL
+    pos = cc_matViewProj * cc_matWorld * pos;
+    #else
+    pos = cc_matViewProj * pos;
+    #endif
+
+    #if USE_TEXTURE
+    v_uv0 = a_uv0;
+    #endif
+
+    v_color = a_color;
+
+    gl_Position = pos;
+  }
+}%
+
+
+CCProgram fs %{
+  precision highp float;
+  
+  #include <alpha-test>
+  #include <texture>
+
+  in vec4 v_color;
+
+  #if USE_TEXTURE
+  in vec2 v_uv0;
+  uniform sampler2D texture;
+  #endif
+
+  void main () {
+    vec4 c = texture2D(texture, v_uv0);
+    
+    vec2 p = vec2(v_uv0.x - 0.5, 0.5 - v_uv0.y);
+    p.x = abs(p.x);
+    p.y = abs(p.y);
+    float w = 0.2;
+    float h = 0.1;
+    vec2 o = vec2(0.5 - w, 0.5 - h);
+    if(p.x > o.x && p.y > o.y) {
+      float R = max(w, h);
+      vec2 f = w > h ? vec2(sqrt(abs(w * w - h * h)), .0) : vec2(.0, sqrt(abs(w * w - h * h)));
+      vec2 f1 = o - f;
+      vec2 f2 = o + f;
+      float lp = length(p - f1) + length(p - f2);
+      c.a *= smoothstep(-0.01, .0, 2. * R - lp);
+    }
+
+    gl_FragColor = c;
+  }
+}%

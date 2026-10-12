@@ -1,0 +1,17 @@
+{
+  "__type__": "cc.Material",
+  "_name": "Label_SDF_Default",
+  "_objFlags": 0,
+  "_native": "",
+  "_effectAsset": {
+    "__uuid__": "0708e5d5-28f0-4cee-8878-120e19b868e5"
+  },
+  "_techniqueIndex": 0,
+  "_techniqueData": {
+    "0": {
+      "defines": {
+        "USE_TEXTURE": true
+      }
+    }
+  }
+}
